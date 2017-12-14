@@ -11,11 +11,13 @@ import os
 import fnmatch
 import math
 from PIL import Image, ImageFilter
+from random import shuffle
 
 def generate_file_names(fnpat, rootdir):
   for  dirpath, dirnames, filenames in os.walk(rootdir):
-    for filename in fnmatch.filter(filenames, fnpat):
-      yield os.path.join(dirpath, filename)
+	for filename in (filenames):
+	  if filename.lower().endswith(fnpat):
+		yield os.path.join(dirpath, filename)
 
 def crop(img):
 	newSize = findNewSize(min(img.size))
@@ -40,28 +42,43 @@ def stitch(imlist, numImgWide, numImgTall):
 		y = imgHeight * i
 		for j in xrange(numImgWide):
 			x = imgWidth * j
-			new_im.paste(imlist[currentImg], (x,y))
+			try:
+				new_im.paste(imlist[currentImg], (x,y))
+			except:
+				print "Image at " + str(currentImg) + " does not exist."
 			currentImg = currentImg + 1
 	return new_im
 
-
+#This section will resize and recrop all of the images then stitch them back together into one latger image containing all of the photos.
 if __name__ == '__main__':
 	imlist = []
- 	for fn in generate_file_names("*.jpg" or "*.png", sys.argv[1]):
- 		size = 800
- 		img = Image.open(fn)
- 		img = resize(crop(img), size)
- 		imlist.append(img)
- 	rows = int(math.sqrt(len(imlist)))
- 	cols = int(math.sqrt(len(imlist)))
- 	fname = 'Patchwork.jpeg'
- 	i = 0
- 	while os.path.isfile(fname):
- 		i = i+1
- 		fname = 'Patchwork_' + str(i) + '.jpeg'
- 	stitch(imlist, rows, cols).save(sys.argv[2] + fname, 'JPEG', quality = 95, dpi = (300,300))
- 		
-
+	progress = 0
+	total = 0
+	mod = 1 #Editing this number will increse or decrese the size of your images.
+	size = (225 * mod)
+	for fn in generate_file_names((".png", ".jpg", ".jpeg", ".tif"), sys.argv[1]):
+		total += 1
+	for fn in generate_file_names((".png", ".jpg", ".jpeg", ".tif"), sys.argv[1]):
+		img = Image.open(fn)
+		img = resize(crop(img), size)
+		imlist.append(img)
+		if progress%10 == 0:
+			percentage = (progress / float(total)) * 100
+			print "Progress: " + str(int(percentage)) + "%"
+		progress = progress+1
+	print "Progress: 100% -stitching photos together now."
+	rows = 28 * ((300 * mod)/float(size)) #int(math.sqrt(len(imlist)))
+	cols = 28 * ((300 * mod)/float(size)) #int(math.sqrt(len(imlist)))
+	fname = 'Patchwork.jpeg'
+	print int(cols)
+	i = 0
+	shuffle(imlist)
+	while os.path.isfile(fname):
+		i = i+1
+		fname = 'Patchwork_' + str(i) + '.jpeg'
+	stitch(imlist, int(rows), int(cols)).save(sys.argv[2] + fname, 'JPEG', quality = 95, dpi = (300,300))
+		
+#This section will resize and crop the images and save them to the provided folder with the provided filetype
 #if __name__ == '__main__':
 #	i=0
 # 	for fn in generate_file_names("*.jpg" or "*.png", sys.argv[1]):
@@ -70,4 +87,4 @@ if __name__ == '__main__':
 # 		img = resize(crop(img), size)
 # 		img.save(sys.argv[2] + str(i) + '.' + 'jpeg', 'JPEG', quality = 95, dpi = (300,300))
 # 		i = i+1
- 		#img2.save(sys.argv[2] + str(i) + '.' + sys.argv[3])
+		#img2.save(sys.argv[2] + str(i) + '.' + sys.argv[3])
